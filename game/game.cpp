@@ -127,7 +127,8 @@ void Game::update(float deltaTime){
     
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
     
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[engine.currentFrame], 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 
+    						0, 1, &descriptorSets[engine.currentFrame], 0, nullptr);
         
     VkDeviceSize ZERO = 0;
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.buffer, &ZERO);
