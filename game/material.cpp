@@ -28,6 +28,14 @@ Material::Material(MaterialType type, RenderEngine &engine,
   }
 }
 
+void Material::free(VkDevice dev) {
+  vkDestroyPipeline(dev, pipeline, nullptr);
+  for (VkDescriptorSetLayout l : selfLayouts) {
+    vkDestroyDescriptorSetLayout(dev, l, nullptr);
+  }
+  vkDestroyPipelineLayout(dev, pipelineLayout, nullptr);
+}
+
 void Material::createEnemiesSetLayouts(RenderEngine &engine) {}
 
 void Material::createEnemiesMaterial(RenderEngine &engine,
@@ -487,4 +495,10 @@ MaterialLoader::beginMaterialPass(MaterialType type,
   assert(materials[type].getType() == type);
   materials[type].beginMaterialPass(commandBuffer);
   return materials[type];
+}
+
+void MaterialLoader::free(VkDevice dev) {
+  for (Material &m : materials) {
+    m.free(dev);
+  }
 }

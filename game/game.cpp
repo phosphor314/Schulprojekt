@@ -110,6 +110,8 @@ Game::~Game() {
 
   vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 
+  materials.free(device);
+
   engine.cleanup();
 }
 

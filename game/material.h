@@ -19,6 +19,8 @@ struct Material {
 
   void beginMaterialPass(VkCommandBuffer commandBuffer) const;
 
+  void free(VkDevice);
+
 private:
   MaterialType material;
   VkPipeline pipeline;
@@ -40,6 +42,8 @@ struct MaterialLoader {
   MaterialLoader(RenderEngine &, VkDescriptorSetLayout perFrameSet);
 
   const Material &beginMaterialPass(MaterialType type, VkCommandBuffer);
+
+  void free(VkDevice dev);
 
 private:
   std::vector<Material> materials;
