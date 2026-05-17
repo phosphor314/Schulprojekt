@@ -3,3 +3,5 @@ glslc shader.vert -o compiled/vert.spv
 glslc shader.frag -o compiled/frag.spv
 glslc bulletShader.vert -o compiled/bulletVert.spv
 glslc bulletShading.frag -o compiled/bulletFrag.spv
+glslc particleShader.vert -o compiled/particleVert.spv
+glslc particleShader.frag -o compiled/particleFrag.spv
