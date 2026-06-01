@@ -3,6 +3,8 @@
 #include "BufferStructs.h"
 #include "material.h"
 #include "renderEngine.h"
+#include "level.h"
+#include "constants.h"
 #include <array>
 #include <glm/ext/vector_float3.hpp>
 #include <random>
@@ -19,7 +21,8 @@ public:
   bool running() const;
 
 private:
-  static constexpr uint32_t MAX_ENEMY_COUNT = 200;
+  static constexpr uint32_t MAX_ENEMY_COUNT = 2;
+  static constexpr uint32_t MAX_PARTICLE_COUNT = 20000;
 
   std::array<char, 512> keymap;
   bool leftMouseButtonDown = false;
@@ -52,6 +55,11 @@ private:
   std::mt19937 randomState;
 
   MaterialLoader materials;
+  
+  Particles enemyDeathEffect;
+  
+  ShaderBuffer stagingBuffer;
+  void* stagingBufferMemoryMapped;
 
   VkDevice &device = engine.device;
 

@@ -8,13 +8,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
-#include "constants.h"
 #include <GLFW/glfw3.h>
-#include <array>
 #include <optional>
 #include <string>
 #include <vector>
-#include <vulkan/vk_enum_string_helper.h>
+#include "constants.h"
 
 struct QueueIndices {
   std::optional<uint32_t> graphicsQueue;
@@ -103,7 +101,7 @@ public:
                    VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
                    VkImage &image, VkDeviceMemory &imageMemory);
   std::vector<char> readFile(const std::string &filename);
-  VkResult copyBuffer(ShaderBuffer &srcBuffer, ShaderBuffer &dstBuffer,
+  VkResult copyBuffer(const ShaderBuffer &srcBuffer, const ShaderBuffer &dstBuffer,
                       VkBufferCopy copyRegion);
   VkResult createStagingBuffer(ShaderBuffer &buffer, void **ppData);
   void freeStagingBuffer(ShaderBuffer &buffer);

@@ -30,8 +30,8 @@ Material::Material(MaterialType type, RenderEngine &engine,
 
 void Material::free(VkDevice dev) {
   vkDestroyPipeline(dev, pipeline, nullptr);
-  for (VkDescriptorSetLayout l : selfLayouts) {
-    vkDestroyDescriptorSetLayout(dev, l, nullptr);
+  for (int i=1; i < selfLayouts.size(); ++i) {
+    vkDestroyDescriptorSetLayout(dev, selfLayouts[i], nullptr);
   }
   vkDestroyPipelineLayout(dev, pipelineLayout, nullptr);
 }
@@ -41,16 +41,15 @@ void Material::createEnemiesSetLayouts(RenderEngine &engine) {}
 void Material::createEnemiesMaterial(RenderEngine &engine,
                                      VkDescriptorSetLayout layout) {
   {
+    selfLayouts.push_back(layout);
     createEnemiesSetLayouts(engine);
     VkPipelineLayoutCreateInfo cInfo{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
     };
-    selfLayouts.push_back(layout);
     cInfo.pSetLayouts = selfLayouts.data();
     cInfo.setLayoutCount = selfLayouts.size();
     VkVerify(vkCreatePipelineLayout(engine.device, &cInfo, nullptr,
                                     &pipelineLayout));
-    selfLayouts.pop_back();
   }
   {
     auto vertShaderCode = engine.readFile(SHADER_ROOT + "compiled/vert.spv");
@@ -197,25 +196,23 @@ void Material::createParticleSetLayouts(RenderEngine &engine) {
     };
 
     selfLayouts.push_back(VK_NULL_HANDLE);
-    vkCreateDescriptorSetLayout(engine.device, &cInfo, nullptr,
-                                selfLayouts.data());
+    vkCreateDescriptorSetLayout(engine.device, &cInfo, nullptr, selfLayouts.data());
   }
 }
 
 void Material::createParticlesMaterial(RenderEngine &engine,
                                        VkDescriptorSetLayout layout) {
-  createParticleSetLayouts(engine);
   {
     VkPipelineLayoutCreateInfo cInfo{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
     };
     selfLayouts.push_back(layout);
+  	createParticleSetLayouts(engine);
     cInfo.pSetLayouts = selfLayouts.data();
     cInfo.setLayoutCount = selfLayouts.size();
-    VkVerify(vkCreatePipelineLayout(engine.device, &cInfo, nullptr,
-                                    &pipelineLayout));
-    selfLayouts.pop_back();
+    VkVerify(vkCreatePipelineLayout(engine.device, &cInfo, nullptr, &pipelineLayout));
   }
+  
   {
     auto vertShaderCode =
         engine.readFile(SHADER_ROOT + "compiled/particleVert.spv");

@@ -15,5 +15,5 @@ layout(set=1, binding=0) uniform ParticleUniform {
 } particleInfo;
 
 void main() {
-	outColor = particleInfo.color;
+	outColor = vec4(particleInfo.color);
 }

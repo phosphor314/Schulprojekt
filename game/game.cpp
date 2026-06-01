@@ -37,12 +37,12 @@ Game::Game() {
   materials = MaterialLoader(engine, globalDescriptorSetLayout);
   createDescriptorSets();
   loadModelData();
+  
+  enemyDeathEffect = Particles(MAX_PARTICLE_COUNT, engine, descriptorPool);
 
-  enemies.resize(3);
-  enemies[0].position = {0.0f, 0.0f, 0.0f};
-  enemies[1].position = {2.0f, 0.0f, 1.0f};
-  enemies[2].position = {0.0f, 1.0f, 2.0f};
-
+  stagingBuffer.size = enemyDeathEffect.selfMemory.size;
+  VkVerify(engine.createStagingBuffer(stagingBuffer, &stagingBufferMemoryMapped));
+  
   glfwSetWindowUserPointer(engine.window, this);
 
   glfwSetFramebufferSizeCallback(
@@ -99,6 +99,7 @@ Game::~Game() {
   engine.destroyBuffer(enemyStorageBuffer);
   engine.freeMemory(bufferMemory);
   engine.freeMemory(ssboMemory);
+  engine.freeStagingBuffer(stagingBuffer);
 
   vkUnmapMemory(device, uniformBuffersMemory);
   for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
@@ -119,9 +120,8 @@ void Game::update(float deltaTime) {
   updatePlayer(deltaTime);
   updateBullets(deltaTime);
   updateEnemies(deltaTime);
-
   updateUniformBuffers();
-
+  
   VkCommandBuffer commandBuffer = engine.beginRendering();
 
   const Material *mat = &materials.beginMaterialPass(ENEMIES, commandBuffer);
@@ -143,6 +143,10 @@ void Game::update(float deltaTime) {
   vkCmdBindVertexBuffers(commandBuffer, 0, 1, &bulletVertexBuffer.buffer,
                          &ZERO);
   vkCmdDraw(commandBuffer, 3, projectiles.size(), 0, 0);
+  
+  mat = &materials.beginMaterialPass(PARTICLES, commandBuffer);
+  
+	enemyDeathEffect.update(commandBuffer, deltaTime, stagingBuffer, stagingBufferMemoryMapped, engine, *mat);
 
   engine.endRendering();
 }
@@ -191,7 +195,7 @@ void Game::updatePlayer(float deltaTime) {
 void Game::updateEnemies(float deltaTime) {
   constexpr float DESIRED_DISTANCE = 3.0f;
   constexpr float DESIRED_HEIGHT = 1.2f;
-  constexpr float SPEED = 4.0f;
+  constexpr float SPEED = 0.0f;
 
   std::uniform_real_distribution<float> distRad(20.0f, 50.0f);
   std::uniform_real_distribution<float> distAng(glm::half_pi<float>(),
@@ -200,17 +204,31 @@ void Game::updateEnemies(float deltaTime) {
       glm::rotate(glm::identity<glm::mat4>(), distAng(randomState), player.up) *
       glm::vec4(distRad(randomState) * player.forward, 1.0f);
   Enemy toPush;
-  toPush.health = 20.0f;
+  toPush.health = 10.0f;
   toPush.position = newEnemy;
   if (enemies.size() < MAX_ENEMY_COUNT) {
     enemies.push_back(toPush);
   }
 
-  enemies.erase(std::remove_if(enemies.begin(), enemies.end(),
-                               [](const Enemy &e) { return e.health < 0.0f; }),
-                enemies.end());
-
-  for (Enemy &e : enemies) {
+	int last = enemies.size() - 1;
+  for (int i = 0; i <= last;) {
+    Enemy& e = enemies[i];
+    
+    if (e.health <= 0.0f){
+      for (int i=0; i < 1000; ++i){
+  	    std::uniform_real_distribution velDist(-20.0f, 20.0f);
+  	    std::uniform_real_distribution posDist(-Enemy::HURTBOX_RADIUS, Enemy::HURTBOX_RADIUS);
+  	    if (enemyDeathEffect.particlesPos.size() < enemyDeathEffect.getMaxPaticleCount()){
+  	      enemyDeathEffect.particlesPos.emplace_back(e.position + glm::vec3{posDist(randomState), posDist(randomState), posDist(randomState)});
+  	      enemyDeathEffect.particlesVel.emplace_back(velDist(randomState), velDist(randomState), velDist(randomState));
+  	      enemyDeathEffect.timeToLive.emplace_back(2.0f);
+  	    }
+  	  }
+  	  enemies[i] = enemies[last];
+  	  --last;
+  	  continue;
+    }
+    
     e.forward = glm::normalize(player.position - e.position);
     e.position += SPEED * e.forward * deltaTime;
 
@@ -228,15 +246,17 @@ void Game::updateEnemies(float deltaTime) {
         e.position -= (Enemy::HURTBOX_RADIUS - dist) * norm;
       }
     }
+    
+    ++i;
   }
+  enemies.resize(last + 1);
 
   ShaderBuffer stagingBuffer;
   stagingBuffer.size = sizeof(EnemyStorageBufferStruct) * enemies.size();
   void *pData;
-  VkVerify(engine.createStagingBuffer(stagingBuffer, &pData))
+  VkVerify(engine.createStagingBuffer(stagingBuffer, &pData));
 
-      std::vector<EnemyStorageBufferStruct>
-          enemyData;
+  std::vector<EnemyStorageBufferStruct> enemyData;
   for (const Enemy &e : enemies) {
     EnemyStorageBufferStruct toPush;
     glm::vec3 rotationAxis =
@@ -253,12 +273,11 @@ void Game::updateEnemies(float deltaTime) {
 
   VkBufferCopy bufferCopy;
   bufferCopy.srcOffset = 0;
-  bufferCopy.dstOffset =
-      engine.currentFrame * sizeof(EnemyStorageBufferStruct) * MAX_ENEMY_COUNT;
+  bufferCopy.dstOffset = engine.currentFrame * sizeof(EnemyStorageBufferStruct) * MAX_ENEMY_COUNT;
   bufferCopy.size = stagingBuffer.size;
-  VkVerify(engine.copyBuffer(stagingBuffer, enemyStorageBuffer, bufferCopy))
+  VkVerify(engine.copyBuffer(stagingBuffer, enemyStorageBuffer, bufferCopy));
 
-      engine.freeStagingBuffer(stagingBuffer);
+  engine.freeStagingBuffer(stagingBuffer);
 }
 
 void Game::updateBullets(float deltaTime) {
@@ -401,14 +420,15 @@ void Game::createUniformBuffers() {
                                  uniformBuffers[i]))
   }
 
-  VkVerify(engine.allocateMemory(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                 uniformBuffers.data(), uniformBuffers.size(),
-                                 uniformBuffersMemory))
+  VkVerify(engine.allocateMemory(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                 uniformBuffers.data(), 
+                                 uniformBuffers.size(),
+                                 uniformBuffersMemory));
 
-      VkVerify(vkMapMemory(device, uniformBuffersMemory, 0,
-                           sizeof(UniformBufferObject) * uniformBuffers.size(),
-                           0, &uniformBuffersMapped))
+  VkVerify(vkMapMemory(device, 
+    uniformBuffersMemory, 0,
+		sizeof(UniformBufferObject) * uniformBuffers.size(),
+    0, &uniformBuffersMapped));
 }
 
 void Game::createSSBOs() {
@@ -423,15 +443,17 @@ void Game::createSSBOs() {
 }
 
 void Game::createDescriptorPool() {
-  std::array<VkDescriptorPoolSize, 2> poolSizes;
+  std::array<VkDescriptorPoolSize, 3> poolSizes;
   poolSizes[0].descriptorCount = MAX_FRAMES_IN_FLIGHT;
   poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   poolSizes[1].descriptorCount = MAX_FRAMES_IN_FLIGHT;
   poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  poolSizes[2].descriptorCount = MAX_FRAMES_IN_FLIGHT;
+  poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
   VkDescriptorPoolCreateInfo cInfo{
       .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
-  cInfo.maxSets = MAX_FRAMES_IN_FLIGHT;
+  cInfo.maxSets = MAX_FRAMES_IN_FLIGHT*2;
   cInfo.pPoolSizes = poolSizes.data();
   cInfo.poolSizeCount = poolSizes.size();
 
@@ -446,9 +468,9 @@ void Game::createDescriptorSets() {
   std::array<VkDescriptorSetLayout, MAX_FRAMES_IN_FLIGHT> tmp;
   std::fill_n(tmp.data(), MAX_FRAMES_IN_FLIGHT, globalDescriptorSetLayout);
   allocInfo.pSetLayouts = tmp.data();
-  VkVerify(vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()))
+  VkVerify(vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()));
 
-      for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
     {
       std::array<VkWriteDescriptorSet, 2> descriptorWrites;
       descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

@@ -20,8 +20,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-std::array<const char *const, 0> VK_VALIDATION_LAYERS =
-    {}; //{ "VK_LAYER_KHRONOS_validation" };
+std::array<const char *const, 1> VK_VALIDATION_LAYERS = { "VK_LAYER_KHRONOS_validation"};
 
 bool Vertex::operator==(const Vertex &other) const {
   return position == other.position && normal == other.normal &&
@@ -307,7 +306,6 @@ void RenderEngine::setupDebugMessenger() {
   createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
                                VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
                                VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-  // everything except VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT is logged
   createInfo.messageType =
       VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
       VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
@@ -973,9 +971,10 @@ VkResult RenderEngine::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
   if (result != VK_SUCCESS) {
     return result;
   }
-  return vkQueueWaitIdle(graphicsQueue);
 
   vkFreeCommandBuffers(device, pool, 1, &commandBuffer);
+  
+  return vkQueueWaitIdle(graphicsQueue);
 }
 
 bool RenderEngine::hasStencilComponent(VkFormat format) {
@@ -1069,13 +1068,12 @@ VkResult RenderEngine::allocateMemory(VkMemoryPropertyFlags properties,
   return result;
 }
 
-VkResult RenderEngine::copyBuffer(ShaderBuffer &srcBuffer,
-                                  ShaderBuffer &dstBuffer,
+VkResult RenderEngine::copyBuffer(const ShaderBuffer &srcBuffer,
+                                  const ShaderBuffer &dstBuffer,
                                   VkBufferCopy copyRegion) {
   VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
-  vkCmdCopyBuffer(commandBuffer, srcBuffer.buffer, dstBuffer.buffer, 1,
-                  &copyRegion);
+  vkCmdCopyBuffer(commandBuffer, srcBuffer.buffer, dstBuffer.buffer, 1, &copyRegion);
 
   return endSingleTimeCommands(commandBuffer);
 }

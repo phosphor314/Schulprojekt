@@ -22,7 +22,7 @@ int main() {         // Anfang des Programms
                                        // desiredDiff = gewünschte Zeitdifferenz
   while (game.running()) { // wiederholt eingerücktes bis das Spiel geschlossen
                            // wird
-    game.update(diff.count()); // ruft die updatemethode von game mit diff in
+    game.update(std::min(diff.count(), 1.0f)); // ruft die updatemethode von game mit diff in
                                // sekunden auf
 
     diff = AS_SECONDS(NOW - lastTp); // berechnet verstrichene Zeit

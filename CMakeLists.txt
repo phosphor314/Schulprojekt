@@ -12,7 +12,7 @@ endif()
 project ("Schulprojekt")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-#set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Debug)
 
 if (false)
 # the name of the target operating system

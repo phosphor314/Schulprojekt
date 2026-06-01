@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <vulkan/vk_enum_string_helper.h>
 
 static constexpr std::string SHADER_ROOT = "shaders/";
 constexpr int WIDTH = 800;
