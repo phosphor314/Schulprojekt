@@ -17,8 +17,7 @@
 namespace std {
 template <> struct hash<Vertex> {
   size_t operator()(const Vertex &v) const noexcept {
-    static_assert(sizeof(Vertex) == 4 * sizeof(size_t) + sizeof(int),
-                  "Vertex does not have the right size!");
+    static_assert(sizeof(Vertex) == 4 * sizeof(size_t) + sizeof(int), "Vertex does not have the right size!");
     const size_t *A = reinterpret_cast<const size_t *>(&v);
     const int *B = reinterpret_cast<const int *>(&v) + 8;
     return A[0] ^ (A[1] << 1) ^ (A[2] << 2) ^ (A[3] << 3) ^ (B[0] << 8);
@@ -27,22 +26,36 @@ template <> struct hash<Vertex> {
 } // namespace std
 
 Game::Game() {
-  std::fill_n(keymap.data(), keymap.size(), 0);
   engine.init();
   createUniformBuffers();
   createSSBOs();
   createDescriptorPool();
   createDescriptorSetLayouts();
-  system((SHADER_ROOT + "compile").c_str());
-  materials = MaterialLoader(engine, globalDescriptorSetLayout);
+  compileShaders();
+	createMaterialLoader();
   createDescriptorSets();
   loadModelData();
-  
+  createParticleSystems();
+  initializeWindow();
+  initializeUserInput();
+}
+
+void Game::compileShaders(){
+	system((SHADER_ROOT + "compile").c_str());
+}
+
+void Game::createMaterialLoader(){
+  materials = MaterialLoader(engine, globalDescriptorSetLayout);  
+}
+
+void Game::createParticleSystems(){
   enemyDeathEffect = Particles(MAX_PARTICLE_COUNT, engine, descriptorPool);
 
   stagingBuffer.size = enemyDeathEffect.selfMemory.size;
   VkVerify(engine.createStagingBuffer(stagingBuffer, &stagingBufferMemoryMapped));
-  
+}
+
+void Game::initializeWindow(){
   glfwSetWindowUserPointer(engine.window, this);
 
   glfwSetFramebufferSizeCallback(
@@ -50,7 +63,11 @@ Game::Game() {
         reinterpret_cast<Game *>(glfwGetWindowUserPointer(win))
             ->engine.framebufferSizeCallback(nWidth, nHeight);
       });
+}
 
+void Game::initializeUserInput(){
+  std::fill_n(keymap.data(), keymap.size(), 0);
+  
   glfwSetCursorPosCallback(
       engine.window, [](GLFWwindow *win, double _x, double _y) {
         Game *game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(win));
@@ -61,7 +78,7 @@ Game::Game() {
 
         game->player.up = {0, 0, 1.0f};
         game->player.forward = {sin(y) * sin(x), sin(y) * cos(x), cos(y)};
-      });
+  });
 
   glfwSetKeyCallback(engine.window, [](GLFWwindow *win, int key, int scancode,
                                        int action, int mods) {
@@ -87,7 +104,7 @@ Game::Game() {
             game->leftMouseButtonDown = false;
           }
         }
-      });
+  });
 }
 
 Game::~Game() {
@@ -120,9 +137,19 @@ void Game::update(float deltaTime) {
   updatePlayer(deltaTime);
   updateBullets(deltaTime);
   updateEnemies(deltaTime);
+  
   updateUniformBuffers();
   
   VkCommandBuffer commandBuffer = engine.beginRendering();
+  
+  enemyDeathEffect.update(commandBuffer, deltaTime, stagingBuffer, stagingBufferMemoryMapped);
+  
+  render(commandBuffer);
+  
+  engine.endRendering();
+}
+
+void Game::render(VkCommandBuffer commandBuffer){
 
   const Material *mat = &materials.beginMaterialPass(ENEMIES, commandBuffer);
 
@@ -146,9 +173,7 @@ void Game::update(float deltaTime) {
   
   mat = &materials.beginMaterialPass(PARTICLES, commandBuffer);
   
-	enemyDeathEffect.update(commandBuffer, deltaTime, stagingBuffer, stagingBufferMemoryMapped, engine, *mat);
-
-  engine.endRendering();
+	enemyDeathEffect.render(commandBuffer, *mat, engine);
 }
 
 void Game::updatePlayer(float deltaTime) {
@@ -324,14 +349,14 @@ void Game::updateBullets(float deltaTime) {
   ShaderBuffer stagingBuffer;
   void *pData;
   stagingBuffer.size = sizeof(Projectile) * projectiles.size();
-  VkVerify(engine.createStagingBuffer(stagingBuffer, &pData))
+  VkVerify(engine.createStagingBuffer(stagingBuffer, &pData));
 
-      memcpy(pData, projectiles.data(), stagingBuffer.size);
+  memcpy(pData, projectiles.data(), stagingBuffer.size);
   VkBufferCopy bufferCopy{};
   bufferCopy.size = stagingBuffer.size;
-  VkVerify(engine.copyBuffer(stagingBuffer, bulletVertexBuffer, bufferCopy))
+  VkVerify(engine.copyBuffer(stagingBuffer, bulletVertexBuffer, bufferCopy));
 
-      engine.freeStagingBuffer(stagingBuffer);
+  engine.freeStagingBuffer(stagingBuffer);
 }
 
 void Game::loadModelData() {
@@ -343,46 +368,41 @@ void Game::loadModelData() {
   indexCount = eyeballIndices.size();
 
   vertexBuffer.size = eyeballVertices.size() * sizeof(Vertex);
-  VkVerify(engine.createBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-                                   VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                               vertexBuffer)) indexBuffer.size =
-      eyeballIndices.size() * sizeof(eyeballIndices[0]);
-  VkVerify(engine.createBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
-                                   VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                               indexBuffer))
+  VkVerify(engine.createBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                               vertexBuffer));
+	indexBuffer.size = eyeballIndices.size() * sizeof(eyeballIndices[0]);
+  VkVerify(engine.createBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                               indexBuffer));
 
-      bulletVertexBuffer.size = sizeof(Projectile) * MAX_INSTANCES;
-  VkVerify(engine.createBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-                                   VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                               bulletVertexBuffer))
+  bulletVertexBuffer.size = sizeof(Projectile) * MAX_INSTANCES;
+  VkVerify(engine.createBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                               bulletVertexBuffer));
 
-      std::array<ShaderBuffer, 3>
-          buffers = {vertexBuffer, indexBuffer, bulletVertexBuffer};
+  std::array<ShaderBuffer, 3> buffers = {vertexBuffer, indexBuffer, bulletVertexBuffer};
   VkVerify(engine.allocateMemory(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                 buffers.data(), buffers.size(), bufferMemory))
+                                 buffers.data(), 
+                                 buffers.size(), 
+                                 bufferMemory));
 
-      ShaderBuffer stagingBuffer;
-  stagingBuffer.size =
-      std::max_element(buffers.begin(), buffers.end(),
-                       [](const ShaderBuffer &a, const ShaderBuffer &b) {
+  ShaderBuffer stagingBuffer;
+	stagingBuffer.size = std::max_element(buffers.begin(), buffers.end(), [](const ShaderBuffer &a, const ShaderBuffer &b) {
                          return a.size < b.size;
-                       })
-          ->size;
+                       })->size;
   void *pData;
-  VkVerify(engine.createStagingBuffer(stagingBuffer, &pData))
+  VkVerify(engine.createStagingBuffer(stagingBuffer, &pData));
 
-      memcpy(pData, eyeballVertices.data(), vertexBuffer.size);
+  memcpy(pData, eyeballVertices.data(), vertexBuffer.size);
   VkBufferCopy copyRegion{};
   copyRegion.srcOffset = 0;
   copyRegion.dstOffset = 0;
   copyRegion.size = vertexBuffer.size;
   VkVerify(engine.copyBuffer(stagingBuffer, vertexBuffer, copyRegion))
 
-      memcpy(pData, eyeballIndices.data(), indexBuffer.size);
+  memcpy(pData, eyeballIndices.data(), indexBuffer.size);
   copyRegion.size = indexBuffer.size;
   VkVerify(engine.copyBuffer(stagingBuffer, indexBuffer, copyRegion))
 
-      engine.freeStagingBuffer(stagingBuffer);
+  engine.freeStagingBuffer(stagingBuffer);
 }
 
 void Game::createDescriptorSetLayouts() {
@@ -426,28 +446,32 @@ void Game::createUniformBuffers() {
                                  uniformBuffersMemory));
 
   VkVerify(vkMapMemory(device, 
-    uniformBuffersMemory, 0,
+    uniformBuffersMemory, 
+    0,
 		sizeof(UniformBufferObject) * uniformBuffers.size(),
-    0, &uniformBuffersMapped));
+    0, 
+    &uniformBuffersMapped));
 }
 
 void Game::createSSBOs() {
-  enemyStorageBuffer.size =
-      MAX_FRAMES_IN_FLIGHT * sizeof(EnemyStorageBufferStruct) * MAX_ENEMY_COUNT;
+  enemyStorageBuffer.size = MAX_FRAMES_IN_FLIGHT * sizeof(EnemyStorageBufferStruct) * MAX_ENEMY_COUNT;
 
-  VkVerify(engine.createBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                                   VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                               enemyStorageBuffer))
-      VkVerify(engine.allocateMemory(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                     &enemyStorageBuffer, 1, ssboMemory))
+  VkVerify(engine.createBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                               enemyStorageBuffer));
+  VkVerify(engine.allocateMemory(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                 &enemyStorageBuffer, 
+                                 1, 
+                                 ssboMemory));
 }
 
 void Game::createDescriptorPool() {
   std::array<VkDescriptorPoolSize, 3> poolSizes;
   poolSizes[0].descriptorCount = MAX_FRAMES_IN_FLIGHT;
   poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  
   poolSizes[1].descriptorCount = MAX_FRAMES_IN_FLIGHT;
   poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  
   poolSizes[2].descriptorCount = MAX_FRAMES_IN_FLIGHT;
   poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 

@@ -971,10 +971,12 @@ VkResult RenderEngine::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
   if (result != VK_SUCCESS) {
     return result;
   }
+  
+  result = vkQueueWaitIdle(graphicsQueue);
 
   vkFreeCommandBuffers(device, pool, 1, &commandBuffer);
   
-  return vkQueueWaitIdle(graphicsQueue);
+  return result;
 }
 
 bool RenderEngine::hasStencilComponent(VkFormat format) {

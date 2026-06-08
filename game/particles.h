@@ -7,11 +7,6 @@
 #include "material.h"
 
 
-struct ParticleUBO {
-  glm::vec4 color;
-  float size;
-};
-
 struct Particles {
   std::vector<glm::vec3> particlesPos;
   std::vector<glm::vec3> particlesVel;
@@ -26,9 +21,10 @@ struct Particles {
 	ShaderBuffer getParticleBuffer() const;
 
   void update(VkCommandBuffer commandBuffer, float deltaTime,
-              ShaderBuffer &stagingBuffer, void *stagingBufferMem, RenderEngine& eng, const Material& mat);
-              
+              ShaderBuffer &stagingBuffer, void *stagingBufferMem);
+	void render(VkCommandBuffer commandBuffer, const Material& mat, RenderEngine& eng);
 	void free(RenderEngine&);
+	
 private:
 	uint32_t maxParticlecCount;
 	std::array<ShaderBuffer, MAX_FRAMES_IN_FLIGHT> uniformBuffers;
@@ -39,8 +35,4 @@ private:
   void createDescriptorSetLayout(RenderEngine& eng);
   void createDescritptorSets(RenderEngine& eng, VkDescriptorPool pool);
   void createUniformBuffers(RenderEngine& eng);
-  
-  void updateUBO(float deltaTime, RenderEngine& eng);
 };
-
-struct LevelLoader {};

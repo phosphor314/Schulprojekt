@@ -3,7 +3,7 @@
 #include "BufferStructs.h"
 #include "material.h"
 #include "renderEngine.h"
-#include "level.h"
+#include "particles.h"
 #include "constants.h"
 #include <array>
 #include <glm/ext/vector_float3.hpp>
@@ -67,12 +67,19 @@ private:
   void updateEnemies(float deltaTime);
   void updateBullets(float deltaTime);
 
+	void render(VkCommandBuffer commandBuffer);
+
   void loadModelData();
   void createDescriptorSetLayouts();
   void createUniformBuffers();
   void createSSBOs();
   void createDescriptorPool();
   void createDescriptorSets();
+  void compileShaders();
+  void createMaterialLoader();
+  void createParticleSystems();
+  void initializeWindow();
+  void initializeUserInput();
 
   void updateUniformBuffers();
 

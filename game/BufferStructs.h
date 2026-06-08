@@ -28,8 +28,12 @@ struct EnemyStorageBufferStruct {
   glm::mat4 upperEyelidTransform;
 };
 
-// hitscan
 struct Projectile {
   glm::vec3 position;
   glm::vec3 forward;
+};
+
+struct ParticleUBO {
+  glm::vec4 color;
+  float size;
 };

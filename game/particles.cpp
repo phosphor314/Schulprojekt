@@ -1,5 +1,7 @@
-#include "level.h"
+#include "BufferStructs.h"
+#include "particles.h"
 #include <memory.h>
+
 
 Particles::Particles(uint32_t maxParticleCount, RenderEngine& eng, VkDescriptorPool pool) {
   this->maxParticlecCount = maxParticleCount;
@@ -20,15 +22,17 @@ Particles::Particles(uint32_t maxParticleCount, RenderEngine& eng, VkDescriptorP
   createDescritptorSets(eng, pool);
 }
 
-void Particles::update(VkCommandBuffer buffer, float deltaTime, ShaderBuffer &stagingBuffer, void *stagingBufferMem, RenderEngine& eng, const Material& mat) {
+void Particles::render(VkCommandBuffer commandBuffer, const Material& mat, RenderEngine& eng){
+  VkDeviceSize ZERO = 0;
+  vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mat.getPipelineLayout(), 1, 1, &descriptorSets[eng.currentFrame], 0, nullptr);
+  vkCmdBindVertexBuffers(commandBuffer, 0, 1, &selfMemory.buffer, &ZERO);
+  vkCmdDraw(commandBuffer, particlesPos.size(), 1, 0, 0);  
+}
+
+void Particles::update(VkCommandBuffer buffer, float deltaTime, ShaderBuffer &stagingBuffer, void *stagingBufferMem) {
   assert(particlesPos.size() == particlesVel.size());
   assert(particlesPos.size() == timeToLive.size());
   
-  VkDeviceSize ZERO = 0;
-  vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mat.getPipelineLayout(), 1, 1, &descriptorSets[eng.currentFrame], 0, nullptr);
-  vkCmdBindVertexBuffers(buffer, 0, 1, &selfMemory.buffer, &ZERO);
-  vkCmdDraw(buffer, particlesPos.size(), 1, 0, 0);
-
 	int last = particlesPos.size() - 1;
   for (int i = 0; i <= last;) {
     assert(particlesVel[i].x != 0.0f || particlesVel[i].y != 0.0f || particlesVel[i].z != 0.0f);
@@ -52,16 +56,6 @@ void Particles::update(VkCommandBuffer buffer, float deltaTime, ShaderBuffer &st
 
   VkBufferCopy copyRegion{.srcOffset = 0, .dstOffset = 0, .size = selfMemory.size};
   vkCmdCopyBuffer(buffer, stagingBuffer.buffer, selfMemory.buffer, 1, &copyRegion);
-}
-
-void Particles::updateUBO(float deltaTime, RenderEngine& eng){
-  {
-    ParticleUBO newData{};
-    newData.color = glm::vec4(1.0);
-    newData.size = 32.0f;
-
-    memcpy((char *)uniformBuffersMapped + uniformBuffers[eng.currentFrame].offset, &newData, sizeof(ParticleUBO));
-  }
 }
 
 void Particles::createDescriptorSetLayout(RenderEngine& eng){

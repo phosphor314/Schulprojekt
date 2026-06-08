@@ -1,5 +1,5 @@
 ﻿# Add source to this project's executable.
-add_executable (WizardThing "renderEngine.h" "renderEngine.cpp" "../tiny_obj_loader.h" "material.h" "material.cpp" "game.h" "game.cpp" "level.h" "level.cpp" "constants.h" "BufferStructs.h" "main.cpp")
+add_executable (WizardThing "renderEngine.h" "renderEngine.cpp" "../tiny_obj_loader.h" "material.h" "material.cpp" "game.h" "game.cpp" "particles.h" "particles.cpp" "constants.h" "BufferStructs.h" "main.cpp")
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET WizardThing PROPERTY CXX_STANDARD 20)

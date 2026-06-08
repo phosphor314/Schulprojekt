@@ -196,7 +196,7 @@ void Material::createParticleSetLayouts(RenderEngine &engine) {
     };
 
     selfLayouts.push_back(VK_NULL_HANDLE);
-    vkCreateDescriptorSetLayout(engine.device, &cInfo, nullptr, selfLayouts.data());
+    vkCreateDescriptorSetLayout(engine.device, &cInfo, nullptr, selfLayouts.data() + (selfLayouts.size() - 1));
   }
 }
 
