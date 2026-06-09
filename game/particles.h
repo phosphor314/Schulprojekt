@@ -20,17 +20,19 @@ struct Particles {
 	
 	ShaderBuffer getParticleBuffer() const;
 
-  void update(VkCommandBuffer commandBuffer, float deltaTime,
-              ShaderBuffer &stagingBuffer, void *stagingBufferMem);
+  void update(float deltaTime);
 	void render(VkCommandBuffer commandBuffer, const Material& mat, RenderEngine& eng);
 	void free(RenderEngine&);
 	
 private:
 	uint32_t maxParticlecCount;
+	void* selfMemoryMapped;
 	std::array<ShaderBuffer, MAX_FRAMES_IN_FLIGHT> uniformBuffers;
   void *uniformBuffersMapped;
   VkDescriptorSetLayout descriptorSetLayout;
   std::array<VkDescriptorSet, MAX_FRAMES_IN_FLIGHT> descriptorSets;
+  
+  void updateUniformBuffers(RenderEngine& eng);
   
   void createDescriptorSetLayout(RenderEngine& eng);
   void createDescritptorSets(RenderEngine& eng, VkDescriptorPool pool);

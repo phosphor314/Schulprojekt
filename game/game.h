@@ -21,7 +21,7 @@ public:
   bool running() const;
 
 private:
-  static constexpr uint32_t MAX_ENEMY_COUNT = 2;
+  static constexpr uint32_t MAX_ENEMY_COUNT = 200;
   static constexpr uint32_t MAX_PARTICLE_COUNT = 20000;
 
   std::array<char, 512> keymap;
@@ -57,9 +57,6 @@ private:
   MaterialLoader materials;
   
   Particles enemyDeathEffect;
-  
-  ShaderBuffer stagingBuffer;
-  void* stagingBufferMemoryMapped;
 
   VkDevice &device = engine.device;
 
@@ -67,7 +64,7 @@ private:
   void updateEnemies(float deltaTime);
   void updateBullets(float deltaTime);
 
-	void render(VkCommandBuffer commandBuffer);
+	void render();
 
   void loadModelData();
   void createDescriptorSetLayouts();

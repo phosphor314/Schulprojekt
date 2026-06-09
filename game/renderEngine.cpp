@@ -2,7 +2,6 @@
 #include "../tiny_obj_loader.h"
 #include "GLFW/glfw3.h"
 #include <algorithm>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -14,13 +13,16 @@
 #include <glm/ext/vector_float4.hpp>
 #include <glm/gtc/constants.hpp>
 #include <iostream>
-#include <numeric>
 #include <set>
 #include <stdexcept>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+#ifndef NDEBUG
 std::array<const char *const, 1> VK_VALIDATION_LAYERS = { "VK_LAYER_KHRONOS_validation"};
+#else
+std::array<const char *const, 0> VK_VALIDATION_LAYERS = {};
+#endif
 
 bool Vertex::operator==(const Vertex &other) const {
   return position == other.position && normal == other.normal &&
@@ -99,8 +101,7 @@ void RenderEngine::endRendering() {
 
   VkVerify(vkQueuePresentKHR(presentQueue, &presentInfo))
 
-      if (swapchainImageResult == VK_ERROR_OUT_OF_DATE_KHR ||
-          swapchainImageResult == VK_SUBOPTIMAL_KHR || framebufferResized) {
+  if (swapchainImageResult == VK_ERROR_OUT_OF_DATE_KHR || swapchainImageResult == VK_SUBOPTIMAL_KHR || framebufferResized) {
     framebufferResized = false;
     recreateSwapchain();
   }
@@ -181,16 +182,18 @@ void RenderEngine::initGLFW() {
 }
 
 void RenderEngine::initVulkan() {
-  createVkInstance();     // macht Vulkan für die Nutzung bereit
-  setupDebugMessenger();  // macht Probleme mit Vulkan sichtbar
-  createSurface();        // erstellt die Zeichenoberfläche
-  choosePhysicalDevice(); // wählt eine Grafikkarte
-  createLogicalDevice();  // macht die gewählte Grafikkarte nutzbar
-  createCommandPool();    // erstellt den command pool
-  createSwapchain();      // erstellt die swapchain
-  createRenderPass();     // erstellt den finalen RenderPass
-  initializeSwapchain();  // befüllt die swapchain mit Bildern
-  createCommandBuffers(); // erstellt commandBuffers
+  createVkInstance();
+#ifndef NDEBUG
+  setupDebugMessenger();
+#endif
+  createSurface();
+  choosePhysicalDevice();
+  createLogicalDevice();
+  createCommandPool();
+  createSwapchain();
+  createRenderPass();
+  initializeSwapchain();
+  createCommandBuffers();
 }
 
 void RenderEngine::createVkInstance() {
@@ -552,9 +555,9 @@ void RenderEngine::beginRecordingCommandBuffer(VkCommandBuffer commandBuffer,
                                                uint32_t imageIndex) {
   VkCommandBufferBeginInfo beginInfo{
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-  VkVerify(vkBeginCommandBuffer(commandBuffer, &beginInfo))
+  VkVerify(vkBeginCommandBuffer(commandBuffer, &beginInfo));
 
-      VkViewport viewport{};
+  VkViewport viewport{};
   viewport.height = swapchainExtent.height;
   viewport.width = swapchainExtent.width;
   viewport.x = 0.0f;

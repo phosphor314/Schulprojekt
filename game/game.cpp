@@ -50,9 +50,6 @@ void Game::createMaterialLoader(){
 
 void Game::createParticleSystems(){
   enemyDeathEffect = Particles(MAX_PARTICLE_COUNT, engine, descriptorPool);
-
-  stagingBuffer.size = enemyDeathEffect.selfMemory.size;
-  VkVerify(engine.createStagingBuffer(stagingBuffer, &stagingBufferMemoryMapped));
 }
 
 void Game::initializeWindow(){
@@ -116,7 +113,8 @@ Game::~Game() {
   engine.destroyBuffer(enemyStorageBuffer);
   engine.freeMemory(bufferMemory);
   engine.freeMemory(ssboMemory);
-  engine.freeStagingBuffer(stagingBuffer);
+  
+  enemyDeathEffect.free(engine);
 
   vkUnmapMemory(device, uniformBuffersMemory);
   for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
@@ -140,17 +138,14 @@ void Game::update(float deltaTime) {
   
   updateUniformBuffers();
   
-  VkCommandBuffer commandBuffer = engine.beginRendering();
+  enemyDeathEffect.update(deltaTime);
   
-  enemyDeathEffect.update(commandBuffer, deltaTime, stagingBuffer, stagingBufferMemoryMapped);
-  
-  render(commandBuffer);
-  
-  engine.endRendering();
+  render();
 }
 
-void Game::render(VkCommandBuffer commandBuffer){
-
+void Game::render(){
+  VkCommandBuffer commandBuffer = engine.beginRendering();
+  
   const Material *mat = &materials.beginMaterialPass(ENEMIES, commandBuffer);
 
   vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -163,6 +158,10 @@ void Game::render(VkCommandBuffer commandBuffer){
                        VK_INDEX_TYPE_UINT32);
   vkCmdDrawIndexed(commandBuffer, indexCount, enemies.size(), 0, 0, 0);
 
+  mat = &materials.beginMaterialPass(PARTICLES, commandBuffer);
+  
+	enemyDeathEffect.render(commandBuffer, *mat, engine);
+
   vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 
   mat = &materials.beginMaterialPass(BULLETS, commandBuffer);
@@ -171,36 +170,38 @@ void Game::render(VkCommandBuffer commandBuffer){
                          &ZERO);
   vkCmdDraw(commandBuffer, 3, projectiles.size(), 0, 0);
   
-  mat = &materials.beginMaterialPass(PARTICLES, commandBuffer);
-  
-	enemyDeathEffect.render(commandBuffer, *mat, engine);
+  engine.endRendering();
 }
 
 void Game::updatePlayer(float deltaTime) {
-  constexpr float SPEED = 16.0f;
-  constexpr float BULLET_SPEED = 64.0f;
+  constexpr float SPEED = 64.0f;
+  constexpr float BULLET_SPEED = 200.0f;
   constexpr float BULLET_RANDOMNESS = 8.0f;
   constexpr float GROUND_PLANE = 0.0f;
 
+	glm::vec3 forward = glm::vec3(player.forward.x, player.forward.y, 0);
+	if (forward.length() != 0){
+	  forward /= forward.length();
+	}
+
   if (keymap[GLFW_KEY_W]) {
-    player.position += player.forward * SPEED * deltaTime;
+    player.position += forward * SPEED * deltaTime;
   }
   if (keymap[GLFW_KEY_S]) {
-    player.position -= player.forward * SPEED * deltaTime;
+    player.position -= forward * SPEED * deltaTime;
   }
   if (keymap[GLFW_KEY_D]) {
     player.position +=
-        glm::cross(player.forward, player.up) * SPEED * deltaTime;
+        glm::cross(forward, player.up) * SPEED * deltaTime;
   }
   if (keymap[GLFW_KEY_A]) {
     player.position -=
-        glm::cross(player.forward, player.up) * SPEED * deltaTime;
+        glm::cross(forward, player.up) * SPEED * deltaTime;
   }
   player.position.z = GROUND_PLANE;
 
   if (leftMouseButtonDown) {
-    std::uniform_real_distribution<float> dist(-BULLET_RANDOMNESS,
-                                               BULLET_RANDOMNESS);
+    std::uniform_real_distribution<float> dist(-BULLET_RANDOMNESS, BULLET_RANDOMNESS);
 
     Projectile toPush;
     toPush.forward =
@@ -209,6 +210,13 @@ void Game::updatePlayer(float deltaTime) {
     toPush.position =
         player.position + player.forward * (player.HURTBOX_RADIUS + 0.2f);
     projectiles.push_back(toPush);
+  }
+  
+  for (const Enemy& e : enemies){
+    float sqDist = glm::dot((e.position-player.position),(e.position-player.position));
+    if (sqDist < player.HURTBOX_RADIUS * player.HURTBOX_RADIUS){
+      glfwSetWindowShouldClose(engine.window, GLFW_TRUE);
+    }
   }
 
   engine.cam.fov = glm::half_pi<float>();
@@ -220,14 +228,14 @@ void Game::updatePlayer(float deltaTime) {
 void Game::updateEnemies(float deltaTime) {
   constexpr float DESIRED_DISTANCE = 3.0f;
   constexpr float DESIRED_HEIGHT = 1.2f;
-  constexpr float SPEED = 0.0f;
+  constexpr float SPEED = 8.0f;
 
-  std::uniform_real_distribution<float> distRad(20.0f, 50.0f);
+  std::uniform_real_distribution<float> distRad(50.0f, 100.0f);
   std::uniform_real_distribution<float> distAng(glm::half_pi<float>(),
                                                 3 * glm::half_pi<float>());
   glm::vec3 newEnemy =
-      glm::rotate(glm::identity<glm::mat4>(), distAng(randomState), player.up) *
-      glm::vec4(distRad(randomState) * player.forward, 1.0f);
+      glm::vec3(glm::rotate(glm::identity<glm::mat4>(), distAng(randomState), player.up) *
+      glm::vec4(distRad(randomState) * player.forward, 1.0f)) + player.position;
   Enemy toPush;
   toPush.health = 10.0f;
   toPush.position = newEnemy;
@@ -318,8 +326,7 @@ void Game::updateBullets(float deltaTime) {
 
   for (Projectile &p : projectiles) {
     for (Enemy &e : enemies) {
-      glm::vec3 perp = -glm::normalize(glm::cross(
-          p.forward, glm::cross(p.forward, p.position - e.position)));
+      glm::vec3 perp = -glm::normalize(glm::cross(p.forward, glm::cross(p.forward, p.position - e.position)));
       if (perp == glm::vec3(0.0f, 0.0f, 0.0f)) {
         continue;
       }
@@ -534,15 +541,12 @@ void Game::createDescriptorSets() {
 void Game::updateUniformBuffers() {
   {
     UniformBufferObject newData{};
-    newData.camera =
-        engine.cam.getTransformationMat((float)WIDTH / (float)HEIGHT);
+    newData.camera =engine.cam.getTransformationMat((float)WIDTH / (float)HEIGHT);
     newData.aspectRatio = (float)WIDTH / (float)HEIGHT;
     newData.light_pos = glm::vec4(4.0f, 1.0f, 0.0f, 0.0f);
     newData.view_pos = glm::vec4(engine.cam.eye, 0.0f);
 
-    memcpy((char *)uniformBuffersMapped +
-               uniformBuffers[engine.currentFrame].offset,
-           &newData, sizeof(UniformBufferObject));
+    memcpy((char *)uniformBuffersMapped + uniformBuffers[engine.currentFrame].offset, &newData, sizeof(UniformBufferObject));
   }
 }
 

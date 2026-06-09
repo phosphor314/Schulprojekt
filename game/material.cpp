@@ -189,6 +189,7 @@ void Material::createParticleSetLayouts(RenderEngine &engine) {
     bindings[0].binding = 0;
     bindings[0].descriptorCount = 1;
     bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     VkDescriptorSetLayoutCreateInfo cInfo{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         .bindingCount = bindings.size(),
@@ -200,8 +201,7 @@ void Material::createParticleSetLayouts(RenderEngine &engine) {
   }
 }
 
-void Material::createParticlesMaterial(RenderEngine &engine,
-                                       VkDescriptorSetLayout layout) {
+void Material::createParticlesMaterial(RenderEngine &engine, VkDescriptorSetLayout layout) {
   {
     VkPipelineLayoutCreateInfo cInfo{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -243,12 +243,12 @@ void Material::createParticlesMaterial(RenderEngine &engine,
     VkVertexInputBindingDescription vertexInputBind;
     vertexInputBind.binding = 0;
     vertexInputBind.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-    vertexInputBind.stride = sizeof(Vertex);
+    vertexInputBind.stride = sizeof(glm::vec3);
 
     std::array<VkVertexInputAttributeDescription, 1> vertexInputAttrs;
     vertexInputAttrs[0].binding = 0;
     vertexInputAttrs[0].location = 0;
-    vertexInputAttrs[0].offset = offsetof(Vertex, position);
+    vertexInputAttrs[0].offset = 0;
     vertexInputAttrs[0].format = VK_FORMAT_R32G32B32_SFLOAT;
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{

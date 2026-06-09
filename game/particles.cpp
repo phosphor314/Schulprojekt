@@ -6,36 +6,35 @@
 Particles::Particles(uint32_t maxParticleCount, RenderEngine& eng, VkDescriptorPool pool) {
   this->maxParticlecCount = maxParticleCount;
   
-  selfMemory.size = sizeof(glm::vec3)*maxParticleCount + sizeof(ParticleUBO)*MAX_FRAMES_IN_FLIGHT;
-  eng.createBuffer(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, selfMemory);
-  eng.allocateMemory(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &selfMemory, 1, selfMemory.bufferMemory);  
-  
-  for (int i=0; i < uniformBuffers.size(); ++i){
-		uniformBuffers[i].size = sizeof(ParticleUBO);
-		uniformBuffers[i].offset = i*sizeof(ParticleUBO);
-		eng.createBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, uniformBuffers[i]);
-  }
-  eng.allocateMemory(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers.data(), uniformBuffers.size(), uniformBuffers[0].bufferMemory);
-  
+  selfMemory.size = sizeof(glm::vec3)*maxParticleCount;
+  eng.createBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, selfMemory);
+  eng.allocateMemory(
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+    &selfMemory, 
+    1, 
+    selfMemory.bufferMemory);
+	vkMapMemory(eng.device, selfMemory.bufferMemory, 0, selfMemory.size, 0, &selfMemoryMapped);
+
   createUniformBuffers(eng);
   createDescriptorSetLayout(eng);
   createDescritptorSets(eng, pool);
 }
 
 void Particles::render(VkCommandBuffer commandBuffer, const Material& mat, RenderEngine& eng){
+  updateUniformBuffers(eng);
+  
   VkDeviceSize ZERO = 0;
   vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mat.getPipelineLayout(), 1, 1, &descriptorSets[eng.currentFrame], 0, nullptr);
   vkCmdBindVertexBuffers(commandBuffer, 0, 1, &selfMemory.buffer, &ZERO);
   vkCmdDraw(commandBuffer, particlesPos.size(), 1, 0, 0);  
 }
 
-void Particles::update(VkCommandBuffer buffer, float deltaTime, ShaderBuffer &stagingBuffer, void *stagingBufferMem) {
+void Particles::update(float deltaTime) {
   assert(particlesPos.size() == particlesVel.size());
   assert(particlesPos.size() == timeToLive.size());
   
 	int last = particlesPos.size() - 1;
   for (int i = 0; i <= last;) {
-    assert(particlesVel[i].x != 0.0f || particlesVel[i].y != 0.0f || particlesVel[i].z != 0.0f);
     particlesVel[i] += glm::vec3{0.0f, 0.0f, -30.00f} * deltaTime;
     particlesPos[i] += particlesVel[i] * deltaTime;
     timeToLive[i] -= deltaTime;
@@ -52,10 +51,17 @@ void Particles::update(VkCommandBuffer buffer, float deltaTime, ShaderBuffer &st
   particlesPos.resize(last + 1);
   timeToLive.resize(last + 1);
 
-  memcpy(stagingBufferMem, particlesPos.data(), particlesPos.size() * sizeof(particlesPos[0]));
+  memcpy(selfMemoryMapped, particlesPos.data(), particlesPos.size() * sizeof(particlesPos[0]));
+}
 
-  VkBufferCopy copyRegion{.srcOffset = 0, .dstOffset = 0, .size = selfMemory.size};
-  vkCmdCopyBuffer(buffer, stagingBuffer.buffer, selfMemory.buffer, 1, &copyRegion);
+void Particles::updateUniformBuffers(RenderEngine& eng){
+  {
+    ParticleUBO newData{};
+    newData.color = glm::vec4(1.0, 0.0, 0.0, 1.0);
+    newData.size = 20.0f;
+
+    memcpy((char*)uniformBuffersMapped + uniformBuffers[eng.currentFrame].offset, &newData, sizeof(ParticleUBO));
+  }
 }
 
 void Particles::createDescriptorSetLayout(RenderEngine& eng){
@@ -90,9 +96,9 @@ void Particles::createDescritptorSets(RenderEngine& eng, VkDescriptorPool pool){
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
     {
       VkDescriptorBufferInfo buffInfo{
-        .buffer = selfMemory.buffer,
+        .buffer = uniformBuffers[i].buffer,
         .offset = 0,
-        .range = getMaxPaticleCount()*sizeof(ParticleUBO)
+        .range = uniformBuffers[i].size
       };
       std::array<VkWriteDescriptorSet, 1> descriptorWrites;
       descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -115,12 +121,17 @@ void Particles::createUniformBuffers(RenderEngine& eng){
     uniformBuffers[i].size = sizeof(ParticleUBO);
     VkVerify(eng.createBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, uniformBuffers[i]))
   }
+  eng.allocateMemory(
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+    uniformBuffers.data(), 
+    MAX_FRAMES_IN_FLIGHT, 
+    uniformBuffers[0].bufferMemory);
 
   VkVerify(vkMapMemory(
     eng.device, 
     uniformBuffers[0].bufferMemory, 
-    maxParticlecCount*sizeof(glm::vec3),
-		sizeof(UniformBufferObject) * uniformBuffers.size(),
+    0,
+		sizeof(ParticleUBO) * MAX_FRAMES_IN_FLIGHT,
     0, 
     &uniformBuffersMapped));
 }
@@ -136,6 +147,7 @@ ShaderBuffer Particles::getParticleBuffer() const{
 }
 
 void Particles::free(RenderEngine& eng){
+  vkUnmapMemory(eng.device, selfMemory.bufferMemory);
   eng.destroyBuffer(selfMemory);
   for (ShaderBuffer& buff : uniformBuffers){eng.destroyBuffer(buff);}
   eng.freeMemory(selfMemory.bufferMemory);
