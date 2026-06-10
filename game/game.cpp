@@ -231,8 +231,7 @@ void Game::updateEnemies(float deltaTime) {
   constexpr float SPEED = 8.0f;
 
   std::uniform_real_distribution<float> distRad(50.0f, 100.0f);
-  std::uniform_real_distribution<float> distAng(glm::half_pi<float>(),
-                                                3 * glm::half_pi<float>());
+  std::uniform_real_distribution<float> distAng(glm::half_pi<float>(), 3 * glm::half_pi<float>());
   glm::vec3 newEnemy =
       glm::vec3(glm::rotate(glm::identity<glm::mat4>(), distAng(randomState), player.up) *
       glm::vec4(distRad(randomState) * player.forward, 1.0f)) + player.position;

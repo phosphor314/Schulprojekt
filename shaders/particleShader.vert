@@ -16,5 +16,5 @@ layout(set=1, binding=0) uniform ParticleUniform {
 
 void main() {
   gl_Position = camera.cam*vec4(inPosition, 1.0);
-  gl_PointSize = particleInfo.size / gl_Position.z;
+  gl_PointSize = min(particleInfo.size / gl_Position.z, 1000.0f);
 }

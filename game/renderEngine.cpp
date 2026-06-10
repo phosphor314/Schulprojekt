@@ -386,8 +386,7 @@ void RenderEngine::createSwapchain() {
   createInfo.clipped = VK_TRUE;
   createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-  if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain) !=
-      VK_SUCCESS) {
+  if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain) != VK_SUCCESS) {
     throw std::runtime_error("Failed to create swapchain!");
   }
 
