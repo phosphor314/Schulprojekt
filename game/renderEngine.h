@@ -38,10 +38,10 @@ struct UniformBufferObject {
 };
 
 struct ShaderBuffer {
-  VkDeviceSize size = 0;                        // Grösse des Objekts
-  VkBuffer buffer = VK_NULL_HANDLE;             // der Puffer
-  VkDeviceMemory bufferMemory = VK_NULL_HANDLE; // der ihm zugeordnete Speicher
-  VkDeviceSize offset; // die position des Puffers im Speicher
+  VkDeviceSize size = 0;
+  VkDeviceSize offset;
+  VkBuffer buffer = VK_NULL_HANDLE;
+  VkDeviceMemory bufferMemory = VK_NULL_HANDLE;
 };
 
 struct Vertex {

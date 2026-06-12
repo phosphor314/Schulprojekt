@@ -5,6 +5,7 @@
 #include "renderEngine.h"
 #include "particles.h"
 #include "constants.h"
+#include "input.h"
 #include <array>
 #include <glm/ext/vector_float3.hpp>
 #include <random>
@@ -24,8 +25,7 @@ private:
   static constexpr uint32_t MAX_ENEMY_COUNT = 200;
   static constexpr uint32_t MAX_PARTICLE_COUNT = 20000;
 
-  std::array<char, 512> keymap;
-  bool leftMouseButtonDown = false;
+  InputData inputs;
   RenderEngine engine;
   Player player;
   std::vector<Enemy> enemies;

@@ -63,30 +63,21 @@ void Game::initializeWindow(){
 }
 
 void Game::initializeUserInput(){
-  std::fill_n(keymap.data(), keymap.size(), 0);
-  
   glfwSetCursorPosCallback(
-      engine.window, [](GLFWwindow *win, double _x, double _y) {
+      engine.window, [](GLFWwindow *win, double x, double y) {
         Game *game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(win));
-        constexpr float SENS = 0.01f;
-
-        float x = _x * SENS;
-        float y = _y * SENS;
-
-        game->player.up = {0, 0, 1.0f};
-        game->player.forward = {sin(y) * sin(x), sin(y) * cos(x), cos(y)};
+        game->inputs.setMousePos(glm::vec2(x, y));
   });
 
   glfwSetKeyCallback(engine.window, [](GLFWwindow *win, int key, int scancode,
                                        int action, int mods) {
     Game *game = reinterpret_cast<Game *>(glfwGetWindowUserPointer(win));
 
-    if (key < game->keymap.size()) {
-      if (action == GLFW_PRESS) {
-        game->keymap[key] = 1;
-      } else if (action == GLFW_RELEASE) {
-        game->keymap[key] = 0;
-      }
+    if (action == GLFW_PRESS){
+      game->inputs.setKeyDown(key, true);
+    }
+    else if (action == GLFW_RELEASE){
+      game->inputs.setKeyDown(key, false);
     }
   });
 
@@ -96,9 +87,9 @@ void Game::initializeUserInput(){
 
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
           if (action == GLFW_PRESS) {
-            game->leftMouseButtonDown = true;
+            game->inputs.setMouseButtonDown(true);
           } else if (action == GLFW_RELEASE) {
-            game->leftMouseButtonDown = false;
+            game->inputs.setMouseButtonDown(false);
           }
         }
   });
@@ -179,28 +170,32 @@ void Game::updatePlayer(float deltaTime) {
   constexpr float BULLET_RANDOMNESS = 8.0f;
   constexpr float GROUND_PLANE = 0.0f;
 
+	player.up = {0, 0, 1.0f};
+  player.forward = {
+    sin(inputs.getMousePos().y) * sin(inputs.getMousePos().x), 
+    sin(inputs.getMousePos().y) * cos(inputs.getMousePos().x), 
+    cos(inputs.getMousePos().y)};
+  
 	glm::vec3 forward = glm::vec3(player.forward.x, player.forward.y, 0);
 	if (forward.length() != 0){
 	  forward /= forward.length();
 	}
 
-  if (keymap[GLFW_KEY_W]) {
+  if (inputs.getKeyDown(GLFW_KEY_W)) {
     player.position += forward * SPEED * deltaTime;
   }
-  if (keymap[GLFW_KEY_S]) {
+  if (inputs.getKeyDown(GLFW_KEY_S)) {
     player.position -= forward * SPEED * deltaTime;
   }
-  if (keymap[GLFW_KEY_D]) {
-    player.position +=
-        glm::cross(forward, player.up) * SPEED * deltaTime;
+  if (inputs.getKeyDown(GLFW_KEY_D)) {
+    player.position += glm::cross(forward, player.up) * SPEED * deltaTime;
   }
-  if (keymap[GLFW_KEY_A]) {
-    player.position -=
-        glm::cross(forward, player.up) * SPEED * deltaTime;
+  if (inputs.getKeyDown(GLFW_KEY_A)) {
+    player.position -= glm::cross(forward, player.up) * SPEED * deltaTime;
   }
   player.position.z = GROUND_PLANE;
 
-  if (leftMouseButtonDown) {
+  if (inputs.getMouseButtonDown()) {
     std::uniform_real_distribution<float> dist(-BULLET_RANDOMNESS, BULLET_RANDOMNESS);
 
     Projectile toPush;
