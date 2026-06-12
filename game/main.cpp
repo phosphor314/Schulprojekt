@@ -13,22 +13,18 @@ typedef std::chrono::duration<float, std::chrono::seconds::period> fSec;
 
 using namespace std::chrono_literals;
 
-int main() {         // Anfang des Programms
-  Game game;         // erstellt Game (unterliegende Struktur des Spiels)
-  auto lastTp = NOW; // setzt lastTp auf jetzt
-  fSec diff =
-      AS_SECONDS(1ms); // setzt diff (Zeitdifferenz) auf eine millisekunde
-  fSec desiredDiff = AS_SECONDS(17ms); // setzt desiredDiff auf 17 millisekunden
-                                       // desiredDiff = gewünschte Zeitdifferenz
-  while (game.running()) { // wiederholt eingerücktes bis das Spiel geschlossen
-                           // wird
-    game.update(std::min(diff.count(), 1.0f)); // ruft die updatemethode von game mit diff in
-                               // sekunden auf
+int main() {
+  Game game;
+  auto lastTp = NOW;
+  fSec diff = AS_SECONDS(1ms);
+  fSec desiredDiff = AS_SECONDS(17ms);
+  while (game.running()) {
+    game.update(std::min(diff.count(), 1.0f));
 
-    diff = AS_SECONDS(NOW - lastTp); // berechnet verstrichene Zeit
-    if (diff < desiredDiff) {        //
-      WAIT(diff - desiredDiff);      // wartet bis desiredDiff verstrichen ist
-    } //
-    lastTp = NOW; // setzt lastTp auf den jetztigen Zeitpunkt
+    diff = AS_SECONDS(NOW - lastTp);
+    if (diff < desiredDiff) {
+      WAIT(diff - desiredDiff);
+    }
+    lastTp = NOW;
   }
-} // befreit die von Game beanspruchten Ressourcen
+}
