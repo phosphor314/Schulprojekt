@@ -8,11 +8,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
+#include "constants.h"
 #include <GLFW/glfw3.h>
 #include <optional>
 #include <string>
 #include <vector>
-#include "constants.h"
 
 struct QueueIndices {
   std::optional<uint32_t> graphicsQueue;
@@ -101,8 +101,8 @@ public:
                    VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
                    VkImage &image, VkDeviceMemory &imageMemory);
   std::vector<char> readFile(const std::string &filename);
-  VkResult copyBuffer(const ShaderBuffer &srcBuffer, const ShaderBuffer &dstBuffer,
-                      VkBufferCopy copyRegion);
+  VkResult copyBuffer(const ShaderBuffer &srcBuffer,
+                      const ShaderBuffer &dstBuffer, VkBufferCopy copyRegion);
   VkResult createStagingBuffer(ShaderBuffer &buffer, void **ppData);
   void freeStagingBuffer(ShaderBuffer &buffer);
   void destroyBuffer(ShaderBuffer &buffer);
@@ -179,7 +179,7 @@ private:
                 const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
                 void *pUserData);
   VkFormat findDepthFormat();
-  VkFormat findSuppertedFormat(const std::vector<VkFormat> &candidates,
+  VkFormat findSupportedFormat(const std::vector<VkFormat> &candidates,
                                VkImageTiling tiling,
                                VkFormatFeatureFlags features,
                                VkPhysicalDevice device);

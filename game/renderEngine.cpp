@@ -19,7 +19,8 @@
 #include <vulkan/vulkan_core.h>
 
 #ifndef NDEBUG
-std::array<const char *const, 1> VK_VALIDATION_LAYERS = { "VK_LAYER_KHRONOS_validation"};
+std::array<const char *const, 1> VK_VALIDATION_LAYERS = {
+    "VK_LAYER_KHRONOS_validation"};
 #else
 std::array<const char *const, 0> VK_VALIDATION_LAYERS = {};
 #endif
@@ -48,12 +49,11 @@ VkCommandBuffer RenderEngine::beginRendering() {
 
   // graphics submission
   VkVerify(vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_FALSE,
-                           UINT64_MAX))
+                           UINT64_MAX));
 
-      swapchainImageResult =
-          vkAcquireNextImageKHR(device, swapchain, UINT64_MAX,
-                                imageAvailableSemaphores[currentFrame],
-                                VK_NULL_HANDLE, &imageIndex);
+  swapchainImageResult = vkAcquireNextImageKHR(
+      device, swapchain, UINT64_MAX, imageAvailableSemaphores[currentFrame],
+      VK_NULL_HANDLE, &imageIndex);
   if (swapchainImageResult == VK_ERROR_OUT_OF_DATE_KHR) {
     recreateSwapchain();
     return VK_NULL_HANDLE;
@@ -62,10 +62,10 @@ VkCommandBuffer RenderEngine::beginRendering() {
     throw std::runtime_error("Failed to acquire swap chain image!");
   }
 
-  VkVerify(vkResetFences(device, 1, &inFlightFences[currentFrame]))
+  VkVerify(vkResetFences(device, 1, &inFlightFences[currentFrame]));
 
-      VkVerify(vkResetCommandBuffer(commandBuffers[currentFrame], 0))
-          beginRecordingCommandBuffer(commandBuffers[currentFrame], imageIndex);
+  VkVerify(vkResetCommandBuffer(commandBuffers[currentFrame], 0));
+  beginRecordingCommandBuffer(commandBuffers[currentFrame], imageIndex);
   return commandBuffers[currentFrame];
 }
 
@@ -101,7 +101,8 @@ void RenderEngine::endRendering() {
 
   VkVerify(vkQueuePresentKHR(presentQueue, &presentInfo))
 
-  if (swapchainImageResult == VK_ERROR_OUT_OF_DATE_KHR || swapchainImageResult == VK_SUBOPTIMAL_KHR || framebufferResized) {
+      if (swapchainImageResult == VK_ERROR_OUT_OF_DATE_KHR ||
+          swapchainImageResult == VK_SUBOPTIMAL_KHR || framebufferResized) {
     framebufferResized = false;
     recreateSwapchain();
   }
@@ -386,7 +387,8 @@ void RenderEngine::createSwapchain() {
   createInfo.clipped = VK_TRUE;
   createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-  if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain) != VK_SUCCESS) {
+  if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain) !=
+      VK_SUCCESS) {
     throw std::runtime_error("Failed to create swapchain!");
   }
 
@@ -773,14 +775,14 @@ VkImageView RenderEngine::createImageView(VkImage image, VkFormat format,
 }
 
 VkFormat RenderEngine::findDepthFormat() {
-  return findSuppertedFormat(
+  return findSupportedFormat(
       {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
        VK_FORMAT_D24_UNORM_S8_UINT},
       VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT,
       physicalDevice);
 }
 
-VkFormat RenderEngine::findSuppertedFormat(
+VkFormat RenderEngine::findSupportedFormat(
     const std::vector<VkFormat> &candidates, VkImageTiling tiling,
     VkFormatFeatureFlags features, VkPhysicalDevice device) {
   for (VkFormat format : candidates) {
@@ -973,11 +975,11 @@ VkResult RenderEngine::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
   if (result != VK_SUCCESS) {
     return result;
   }
-  
+
   result = vkQueueWaitIdle(graphicsQueue);
 
   vkFreeCommandBuffers(device, pool, 1, &commandBuffer);
-  
+
   return result;
 }
 
@@ -1077,7 +1079,8 @@ VkResult RenderEngine::copyBuffer(const ShaderBuffer &srcBuffer,
                                   VkBufferCopy copyRegion) {
   VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
-  vkCmdCopyBuffer(commandBuffer, srcBuffer.buffer, dstBuffer.buffer, 1, &copyRegion);
+  vkCmdCopyBuffer(commandBuffer, srcBuffer.buffer, dstBuffer.buffer, 1,
+                  &copyRegion);
 
   return endSingleTimeCommands(commandBuffer);
 }

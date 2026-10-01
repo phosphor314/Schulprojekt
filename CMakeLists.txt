@@ -1,7 +1,7 @@
 ﻿# CMakeList.txt : Top-level CMake project file, do global configuration
 # and include sub-projects here.
 #
-cmake_minimum_required (VERSION 3.9 FATAL_ERROR)
+cmake_minimum_required (VERSION 4.3 FATAL_ERROR)
 
 # Enable Hot Reload for MSVC compilers if supported.
 if (POLICY CMP0141)
@@ -12,6 +12,7 @@ endif()
 project ("Schulprojekt")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+#set(CMAKE_BUILD_TYPE Debug)
 
 if (false)
 # the name of the target operating system

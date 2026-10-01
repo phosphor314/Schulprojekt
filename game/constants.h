@@ -9,6 +9,7 @@ static constexpr std::string SHADER_ROOT = "shaders/";
 constexpr int WIDTH = 800;
 constexpr int HEIGHT = 600;
 constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 3;
+constexpr float FOV = 1.5707963;
 
 #define VkVerify(expr)                                                         \
   {                                                                            \

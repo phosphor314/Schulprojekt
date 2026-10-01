@@ -1,34 +1,75 @@
 #pragma once
 
-#include "renderEngine.h"
-#include "material.h"
 #include "BufferStructs.h"
 #include "input.h"
+#include "material.h"
+#include "particles.h"
+#include "renderEngine.h"
 #include <array>
+#include <random>
 
+struct Game;
 
-struct CompositeObject{
+class Level {
 public:
-	CompositeObject() = default;
-	
-	void render(MaterialType currentType, VkCommandBuffer commandBuffer);
+  virtual ~Level();
+  virtual void update(const InputData &data, float deltaTime) = 0;
+  virtual void render(VkCommandBuffer) = 0;
 
-	void setGeometry(MaterialType which, ShaderBuffer geometry, uint32_t vertexCount, uint32_t instanceCount);
-	
+protected:
+  Player player;
+};
+
+class Level0 : public Level {
+public:
+  Level0(RenderEngine &eng, Game &game);
+  ~Level0() override;
+
+  virtual void update(const InputData &data, float deltaTime) override;
+  virtual void render(VkCommandBuffer) override;
+
 private:
-	std::array<ShaderBuffer, MAX_MAT> geometry;
-	std::array<uint32_t, MAX_MAT> vertexCounts;
-	std::array<uint32_t, MAX_MAT> instanceCounts;
-};
+  static constexpr uint32_t MAX_ENEMY_COUNT = 200;
+  static constexpr uint32_t MAX_PARTICLE_COUNT = 20000;
 
-class ILevel{
-	virtual CompositeObject getStaticGeometry() = 0;
-	virtual Player initializePlayer() = 0;
-	virtual void update(const InputData& data) = 0;
-};
+  RenderEngine *engine;
+  Game *game;
 
-class Level0 : ILevel{
-	virtual CompositeObject getStaticGeometry();
-	virtual Player initializePlayer();
-	virtual void update(const InputData& data);
+  std::vector<Enemy> enemies;
+  std::vector<Projectile> projectiles;
+
+  VkDescriptorPool descriptorPool;
+  VkDescriptorSetLayout globalDescriptorSetLayout;
+  std::array<VkDescriptorSet, MAX_FRAMES_IN_FLIGHT> descriptorSets;
+
+  VkDeviceMemory uniformBuffersMemory;
+  std::array<ShaderBuffer, MAX_FRAMES_IN_FLIGHT> uniformBuffers;
+  void *uniformBuffersMapped;
+
+  ShaderBuffer enemyStorageBuffer;
+
+  VkDeviceMemory geometryBufferMemory;
+  ShaderBuffer vertexBuffer;
+  ShaderBuffer indexBuffer;
+  uint32_t indexCount;
+
+  ShaderBuffer bulletVertexBuffer;
+
+  std::mt19937 randomState;
+
+  Particles enemyDeathEffect;
+
+  MaterialLoader materialLoader;
+
+  void loadModelData();
+  void createDescriptorSetLayouts();
+  void createDescriptorPool();
+  void createDescriptorSets();
+  void createUniformBuffers();
+  void createSSBOs();
+
+  void updateBullets(float deltaTime);
+  void updateEnemies(float deltaTime);
+  void updatePlayer(const InputData &, float deltaTime);
+  void updateUniformBuffer();
 };

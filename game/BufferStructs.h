@@ -12,12 +12,10 @@ struct Player {
 };
 
 struct Enemy {
-  static constexpr float HURTBOX_RADIUS = 1.2f;
+  static constexpr float HURTBOX_RADIUS = 2.0f;
 
   glm::vec3 position;
   glm::vec3 forward;
-
-  float eyelidAngle;
 
   float health;
 };
