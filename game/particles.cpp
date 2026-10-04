@@ -3,6 +3,13 @@
 #include <memory.h>
 
 
+/**
+ * @brief Constructs a new Particles object.
+ * 
+ * @param maxParticleCount The maximum number of particles the system can handle.
+ * @param eng Reference to the RenderEngine instance.
+ * @param pool The descriptor pool to be used.
+ */
 Particles::Particles(uint32_t maxParticleCount, RenderEngine& eng, VkDescriptorPool pool) {
   this->maxParticlecCount = maxParticleCount;
   
@@ -20,6 +27,13 @@ Particles::Particles(uint32_t maxParticleCount, RenderEngine& eng, VkDescriptorP
   createDescritptorSets(eng, pool);
 }
 
+/**
+ * @brief Renders the particle system.
+ * 
+ * @param commandBuffer The Vulkan command buffer to record rendering commands into.
+ * @param mat The material to use for rendering.
+ * @param eng Reference to the RenderEngine instance.
+ */
 void Particles::render(VkCommandBuffer commandBuffer, const Material& mat, RenderEngine& eng){
   updateUniformBuffers(eng);
   
@@ -29,6 +43,11 @@ void Particles::render(VkCommandBuffer commandBuffer, const Material& mat, Rende
   vkCmdDraw(commandBuffer, particlesPos.size(), 1, 0, 0);  
 }
 
+/**
+ * @brief Updates the state of all particles (position, velocity, lifetime).
+ * 
+ * @param deltaTime Time elapsed since the last frame in seconds.
+ */
 void Particles::update(float deltaTime) {
   assert(particlesPos.size() == particlesVel.size());
   assert(particlesPos.size() == timeToLive.size());
@@ -54,6 +73,11 @@ void Particles::update(float deltaTime) {
   memcpy(selfMemoryMapped, particlesPos.data(), particlesPos.size() * sizeof(particlesPos[0]));
 }
 
+/**
+ * @brief Updates the uniform buffer data for the particle system.
+ * 
+ * @param eng Reference to the RenderEngine instance.
+ */
 void Particles::updateUniformBuffers(RenderEngine& eng){
   {
     ParticleUBO newData{};
@@ -64,6 +88,11 @@ void Particles::updateUniformBuffers(RenderEngine& eng){
   }
 }
 
+/**
+ * @brief Creates the descriptor set layout for the particle system.
+ * 
+ * @param eng Reference to the RenderEngine instance.
+ */
 void Particles::createDescriptorSetLayout(RenderEngine& eng){
   {
     VkDescriptorSetLayoutBinding uboLayoutBinding{};
@@ -83,6 +112,12 @@ void Particles::createDescriptorSetLayout(RenderEngine& eng){
   }
 }
 
+/**
+ * @brief Creates descriptor sets for the particle system.
+ * 
+ * @param eng Reference to the RenderEngine instance.
+ * @param pool The descriptor pool to use.
+ */
 void Particles::createDescritptorSets(RenderEngine& eng, VkDescriptorPool pool){
   VkDescriptorSetAllocateInfo allocInfo{
       .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
@@ -116,6 +151,11 @@ void Particles::createDescritptorSets(RenderEngine& eng, VkDescriptorPool pool){
   }
 }
 
+/**
+ * @brief Creates the uniform buffers for the particle system.
+ * 
+ * @param eng Reference to the RenderEngine instance.
+ */
 void Particles::createUniformBuffers(RenderEngine& eng){
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
     uniformBuffers[i].size = sizeof(ParticleUBO);
@@ -136,16 +176,31 @@ void Particles::createUniformBuffers(RenderEngine& eng){
     &uniformBuffersMapped));
 }
 
+/**
+ * @brief Gets the maximum number of particles this system supports.
+ * 
+ * @return uint32_t The maximum particle capacity.
+ */
 uint32_t Particles::getMaxPaticleCount() const{
   return maxParticlecCount;
 }
 	
+/**
+ * @brief Gets the buffer structure containing particle data.
+ * 
+ * @return ShaderBuffer The buffer definition for particle data.
+ */
 ShaderBuffer Particles::getParticleBuffer() const{
   ShaderBuffer out = selfMemory;
   out.size = getMaxPaticleCount()*sizeof(glm::vec3);
   return out;
 }
 
+/**
+ * @brief Frees all allocated resources for the particle system.
+ * 
+ * @param eng Reference to the RenderEngine instance.
+ */
 void Particles::free(RenderEngine& eng){
   vkUnmapMemory(eng.device, selfMemory.bufferMemory);
   eng.destroyBuffer(selfMemory);

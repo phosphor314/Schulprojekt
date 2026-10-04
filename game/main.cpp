@@ -13,6 +13,11 @@ typedef std::chrono::duration<float, std::chrono::seconds::period> fSec;
 
 using namespace std::chrono_literals;
 
+/**
+ * @brief Main entry point of the application.
+ * 
+ * @return int Exit status of the program.
+ */
 int main() {
   Game game;
   auto lastTp = NOW;

@@ -12,9 +12,23 @@ struct Game;
 
 class Level {
 public:
-  virtual ~Level();
-  virtual void update(const InputData &data, float deltaTime) = 0;
-  virtual void render(VkCommandBuffer) = 0;
+  /**
+ * @brief Virtual destructor for the Level base class.
+ */
+virtual ~Level();
+  /**
+ * @brief Updates the level state.
+ * 
+ * @param data Input data from the user (keys, mouse, etc.).
+ * @param deltaTime Time elapsed since the last frame in seconds.
+ */
+virtual void update(const InputData &data, float deltaTime) = 0;
+  /**
+ * @brief Renders the level content.
+ * 
+ * @param commandBuffer The Vulkan command buffer to record rendering commands into.
+ */
+virtual void render(VkCommandBuffer) = 0;
 
 protected:
   Player player;
@@ -22,11 +36,31 @@ protected:
 
 class Level0 : public Level {
 public:
-  Level0(RenderEngine &eng, Game &game);
-  ~Level0() override;
+  /**
+ * @brief Constructor for Level0.
+ * 
+ * @param eng Pointer to the RenderEngine instance.
+ * @param game Pointer to the Game instance.
+ */
+Level0(RenderEngine &eng, Game &game);
+  /**
+ * @brief Destructor for Level0.
+ */
+~Level0() override;
 
-  virtual void update(const InputData &data, float deltaTime) override;
-  virtual void render(VkCommandBuffer) override;
+  /**
+ * @brief Implementation of the level update logic.
+ * 
+ * @param data Input data from the user (keys, mouse, etc.).
+ * @param deltaTime Time elapsed since the last frame in seconds.
+ */
+virtual void update(const InputData &data, float deltaTime) override;
+  /**
+ * @brief Implementation of the level rendering logic.
+ * 
+ * @param commandBuffer The Vulkan command buffer to record rendering commands into.
+ */
+virtual void render(VkCommandBuffer) override;
 
 private:
   static constexpr uint32_t MAX_ENEMY_COUNT = 200;
@@ -61,15 +95,52 @@ private:
 
   MaterialLoader materialLoader;
 
-  void loadModelData();
-  void createDescriptorSetLayouts();
-  void createDescriptorPool();
-  void createDescriptorSets();
-  void createUniformBuffers();
-  void createSSBOs();
+  /**
+ * @brief Loads all necessary assets (models, textures, etc.) for the level.
+ */
+void loadModelData();
+  /**
+ * @brief Creates and binds all necessary descriptor set layouts.
+ */
+void createDescriptorSetLayouts();
+  /**
+ * @brief Initializes the descriptor pool for Vulkan.
+ */
+void createDescriptorPool();
+  /**
+ * @brief Creates descriptor sets used across different pipeline stages.
+ */
+void createDescriptorSets();
+  /**
+ * @brief Creates uniform buffers for storing per-frame data.
+ */
+void createUniformBuffers();
+  /**
+ * @brief Creates Shader Storage Buffer Objects (SSBOs) for large data sets.
+ */
+void createSSBOs();
 
-  void updateBullets(float deltaTime);
-  void updateEnemies(float deltaTime);
-  void updatePlayer(const InputData &, float deltaTime);
-  void updateUniformBuffer();
+  /**
+ * @brief Updates the state of all projectiles.
+ * 
+ * @param deltaTime Time elapsed since the last frame in seconds.
+ */
+void updateBullets(float deltaTime);
+  /**
+ * @brief Updates the state of all enemies.
+ * 
+ * @param deltaTime Time elapsed since the last frame in seconds.
+ */
+void updateEnemies(float deltaTime);
+  /**
+ * @brief Updates the player state based on user input.
+ * 
+ * @param data Input data from the user (keys, mouse, etc.).
+ * @param deltaTime Time elapsed since the last frame in seconds.
+ */
+void updatePlayer(const InputData &data, float deltaTime);
+  /**
+ * @brief Updates the uniform buffer data before rendering.
+ */
+void updateUniformBuffer();
 };

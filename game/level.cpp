@@ -7,8 +7,17 @@
 #include <iostream>
 #include <memory.h>
 
+/**
+ * @brief Virtual destructor for the Level base class.
+ */
 Level::~Level() {}
 
+/**
+ * @brief Constructor for Level0.
+ * 
+ * @param eng Pointer to the RenderEngine instance.
+ * @param game Pointer to the Game instance.
+ */
 Level0::Level0(RenderEngine &eng, Game &game) {
   this->game = &game;
   engine = &eng;
@@ -22,6 +31,9 @@ Level0::Level0(RenderEngine &eng, Game &game) {
   enemyDeathEffect = Particles(MAX_PARTICLE_COUNT, eng, descriptorPool);
 }
 
+/**
+ * @brief Destructor for Level0.
+ */
 Level0::~Level0() {
   VkDevice &device = engine->device;
 
@@ -46,6 +58,9 @@ Level0::~Level0() {
   materialLoader.free(device);
 }
 
+/**
+ * @brief Loads all necessary assets (models, textures, etc.) for the level.
+ */
 void Level0::loadModelData() {
   constexpr uint32_t MAX_INSTANCES = 10000;
 
@@ -98,6 +113,9 @@ void Level0::loadModelData() {
       engine->freeStagingBuffer(stagingBuffer);
 }
 
+/**
+ * @brief Creates and binds all necessary descriptor set layouts.
+ */
 void Level0::createDescriptorSetLayouts() {
   // create the per frame set layout
   {
@@ -126,6 +144,9 @@ void Level0::createDescriptorSetLayouts() {
   }
 }
 
+/**
+ * @brief Initializes the descriptor pool for Vulkan.
+ */
 void Level0::createDescriptorPool() {
   std::array<VkDescriptorPoolSize, 3> poolSizes;
   poolSizes[0].descriptorCount = MAX_FRAMES_IN_FLIGHT;
@@ -147,6 +168,9 @@ void Level0::createDescriptorPool() {
       vkCreateDescriptorPool(engine->device, &cInfo, nullptr, &descriptorPool))
 }
 
+/**
+ * @brief Creates descriptor sets used across different pipeline stages.
+ */
 void Level0::createDescriptorSets() {
   VkDescriptorSetAllocateInfo allocInfo{
       .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
@@ -195,6 +219,9 @@ void Level0::createDescriptorSets() {
   }
 }
 
+/**
+ * @brief Creates uniform buffers for storing per-frame data.
+ */
 void Level0::createUniformBuffers() {
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
     uniformBuffers[i].size = sizeof(UniformBufferObject);
@@ -212,6 +239,9 @@ void Level0::createUniformBuffers() {
                        &uniformBuffersMapped));
 }
 
+/**
+ * @brief Creates Shader Storage Buffer Objects (SSBOs) for large data sets.
+ */
 void Level0::createSSBOs() {
   enemyStorageBuffer.size =
       MAX_FRAMES_IN_FLIGHT * sizeof(EnemyStorageBufferStruct) * MAX_ENEMY_COUNT;
@@ -225,6 +255,12 @@ void Level0::createSSBOs() {
                                   enemyStorageBuffer.bufferMemory));
 }
 
+/**
+ * @brief Implementation of the level update logic.
+ * 
+ * @param data Input data from the user (keys, mouse, etc.).
+ * @param deltaTime Time elapsed since the last frame in seconds.
+ */
 void Level0::update(const InputData &data, float deltaTime) {
   updatePlayer(data, deltaTime);
   updateEnemies(deltaTime);
@@ -233,6 +269,11 @@ void Level0::update(const InputData &data, float deltaTime) {
   updateUniformBuffer();
 }
 
+/**
+ * @brief Updates the state of all projectiles.
+ * 
+ * @param deltaTime Time elapsed since the last frame in seconds.
+ */
 void Level0::updateBullets(float deltaTime) {
   constexpr float CUTOFF_DIST = 32.0f;
 
@@ -289,6 +330,11 @@ void Level0::updateBullets(float deltaTime) {
   engine->freeStagingBuffer(stagingBuffer);
 }
 
+/**
+ * @brief Updates the state of all enemies.
+ * 
+ * @param deltaTime Time elapsed since the last frame in seconds.
+ */
 void Level0::updateEnemies(float deltaTime) {
   constexpr float DESIRED_DISTANCE = 3.0f;
   constexpr float DESIRED_HEIGHT = 1.2f;
@@ -385,6 +431,12 @@ void Level0::updateEnemies(float deltaTime) {
   engine->freeStagingBuffer(stagingBuffer);
 }
 
+/**
+ * @brief Updates the player state based on user input.
+ * 
+ * @param inputs Input data from the user (keys, mouse, etc.).
+ * @param deltaTime Time elapsed since the last frame in seconds.
+ */
 void Level0::updatePlayer(const InputData &inputs, float deltaTime) {
   constexpr float SPEED = 64.0f;
   constexpr float BULLET_SPEED = 200.0f;
@@ -442,6 +494,9 @@ void Level0::updatePlayer(const InputData &inputs, float deltaTime) {
   engine->cam.up = player.up;
 }
 
+/**
+ * @brief Updates the uniform buffer data before rendering.
+ */
 void Level0::updateUniformBuffer() {
   UniformBufferObject ubo;
   ubo.aspectRatio = (float)WIDTH / HEIGHT;

@@ -2,10 +2,25 @@
 #include "BufferStructs.h"
 #include "constants.h"
 
+/**
+ * @brief Gets the type of the material.
+ * 
+ * @return MaterialType The type of the material.
+ */
 MaterialType Material::getType() const { return material; }
 
+/**
+ * @brief Gets the pipeline layout for the material.
+ * 
+ * @return VkPipelineLayout The pipeline layout.
+ */
 VkPipelineLayout Material::getPipelineLayout() const { return pipelineLayout; }
 
+/**
+ * @brief Binds the pipeline for the material pass.
+ * 
+ * @param commandBuffer The Vulkan command buffer to bind the pipeline to.
+ */
 void Material::beginMaterialPass(VkCommandBuffer commandBuffer) const {
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 }
@@ -28,6 +43,11 @@ Material::Material(MaterialType type, RenderEngine &engine,
   }
 }
 
+/**
+ * @brief Frees all resources associated with the material.
+ * 
+ * @param dev The Vulkan device.
+ */
 void Material::free(VkDevice dev) {
   vkDestroyPipeline(dev, pipeline, nullptr);
   for (int i=1; i < selfLayouts.size(); ++i) {
@@ -36,6 +56,11 @@ void Material::free(VkDevice dev) {
   vkDestroyPipelineLayout(dev, pipelineLayout, nullptr);
 }
 
+/**
+ * @brief Creates the descriptor set layout for the enemies material.
+ * 
+ * @param engine Reference to the RenderEngine instance.
+ */
 void Material::createEnemiesSetLayouts(RenderEngine &engine) {}
 
 void Material::createEnemiesMaterial(RenderEngine &engine,
@@ -494,6 +519,11 @@ MaterialLoader::beginMaterialPass(MaterialType type,
   return materials[type];
 }
 
+/**
+ * @brief Frees all resources allocated by the MaterialLoader.
+ * 
+ * @param dev The Vulkan device.
+ */
 void MaterialLoader::free(VkDevice dev) {
   for (Material &m : materials) {
     m.free(dev);

@@ -22,6 +22,9 @@ template <> struct hash<Vertex> {
 };
 } // namespace std
 
+/**
+ * @brief Constructs a new Game object.
+ */
 Game::Game() {
   engine.init();
   compileShaders();
@@ -30,10 +33,16 @@ Game::Game() {
   currentLevel = std::make_unique<Level0>(engine, *this);
 }
 
+/**
+ * @brief Compiles necessary shaders for the rendering pipeline.
+ */
 void Game::compileShaders(){
 	system((SHADER_ROOT + "compile").c_str());
 }
 
+/**
+ * @brief Sets up the game window and graphics context.
+ */
 void Game::initializeWindow(){
   glfwSetWindowUserPointer(engine.window, this);
 
@@ -44,6 +53,9 @@ void Game::initializeWindow(){
       });
 }
 
+/**
+ * @brief Sets up input handling mechanisms.
+ */
 void Game::initializeUserInput(){
   glfwSetCursorPosCallback(
       engine.window, [](GLFWwindow *win, double x, double y) {
@@ -77,17 +89,28 @@ void Game::initializeUserInput(){
   });
 }
 
+/**
+ * @brief Destructor for the Game class.
+ */
 Game::~Game() {
   vkDeviceWaitIdle(device);
   currentLevel.reset();
   engine.cleanup();
 }
 
+/**
+ * @brief Updates the state of the game.
+ * 
+ * @param deltaTime Time elapsed since the last frame in seconds.
+ */
 void Game::update(float deltaTime) {
   currentLevel->update(inputs, deltaTime);
   render();
 }
 
+/**
+ * @brief Renders the current state of the game.
+ */
 void Game::render(){
   VkCommandBuffer commandBuffer = engine.beginRendering();
   
@@ -96,6 +119,13 @@ void Game::render(){
   engine.endRendering();
 }
 
+/**
+ * @brief Loads a 3D model from the specified path.
+ * 
+ * @param modelPath Path to the model file.
+ * @param vertices Output vector to store model vertices.
+ * @param indices Output vector to store model indices.
+ */
 void loadModel(const char *modelPath, std::vector<Vertex> &vertices, std::vector<uint32_t> &indices) {
   tinyobj::ObjReader reader;
   reader.ParseFromFile(modelPath);
